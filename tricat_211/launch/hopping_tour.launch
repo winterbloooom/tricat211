@@ -1,0 +1,14 @@
+<launch>
+	<node pkg="tricat_211"  type="Fake_GPS_Publish.py" name="GPS" respawn="true"/>
+
+	<node pkg="tricat_211"  type="gps_converter.py" name="GPS_Converter" respawn="true"/>
+
+	<rosparam command="load" file="$(find tricat_211)/params/parameter_gps_convert.yaml"/>
+
+	<node pkg="tricat_211"  type="Fake_imu_Publish.py" name="IMU" respawn="true"/>
+	
+	<node pkg="tricat_211"  type="local_heading_for_imu.py" name="IMU_Converter" respawn="true"/>
+
+	<!--<node pkg="tricat_211"  type="hopping_path_planner.py" name="hopping_PP" respawn="true"/>-->
+
+</launch>
