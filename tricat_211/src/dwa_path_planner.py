@@ -60,6 +60,8 @@ class Goal:
                             [15.0, 15.0],
                             [13.0, 13.0]]
                             )
+        self.enterance_center = None
+        self.state = 1 # 1 : not set, 2 : set, 3 : already passed
 
     def insert_goal_point(self):
         pass
@@ -69,6 +71,9 @@ class Goal:
 
     def set_next_point(self):
         self.goal_list = np.delete(self.goal_list, 0, axis = 0)
+
+    def set_enterance_center(self, x, y):
+        self.enterance_center = [x, y]
 
 
 class DWA_Calc:
