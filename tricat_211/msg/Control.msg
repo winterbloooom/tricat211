@@ -1,2 +1,2 @@
-int64 thruster
-int64 servo
+uint16 thruster
+uint16 servo
