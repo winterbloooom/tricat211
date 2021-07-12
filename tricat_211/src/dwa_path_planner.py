@@ -1,29 +1,23 @@
 #!/usr/bin/env python
 
 import math
-from enum import Enum
+from enum import Enum # delete check plz
 import numpy as np
 import rospy
 
 from std_msgs.msg import String
-from obstacle_detector.msg import Obstacles
-from obstacle_detector.msg import CircleObstacle
-from obstacle_detector.msg import SegmentObstacle
+from obstacle_detector.msg import Obstacles, CircleObstacle, SegmentObstacle
 from geometry_msgs.msg import Point
-from tricat_211.msg import HeadingAngle
-from tricat_211.msg import FilteringObstacles
-from tricat_211.msg import FilteringWalls
-from tricat_211.msg import DWA
-
+from tricat_211.msg import HeadingAngle, FilteringObstacles, FilteringWalls, DWA
 
 class Boat:
     def __init__(self):
         self.x = 0.0  # current x coordinate of boat
         self.y = 0.0  # current y coordinate of boat
-        self.yaw = math.pi/8.0  # [rad] current rotation(yaw) of boat
+        self.yaw = math.pi/8.0  # [rad] current rotation(yaw) of boat          initial yaw
         self.speed = 0.0  # [m/s] current speed of boat
         self.yaw_rate = 0.0  # [rad/s] 
-        self.heading = 0.0  # heading angle(?)
+        self.heading = 0.0  # heading angle(?)               # initial yaw = initial heading
 
         rospy.Subscriber("/enu_position", Point, self.boat_xy_callback)
         rospy.Subscriber("/bearing", HeadingAngle, self.heading_callback)
@@ -60,8 +54,6 @@ class Goal:
                             [15.0, 15.0],
                             [13.0, 13.0]]
                             )
-        self.enterance_center = None
-        self.state = 1 # 1 : not set, 2 : set, 3 : already passed
 
     def insert_goal_point(self):
         pass
@@ -71,9 +63,6 @@ class Goal:
 
     def set_next_point(self):
         self.goal_list = np.delete(self.goal_list, 0, axis = 0)
-
-    def set_enterance_center(self, x, y):
-        self.enterance_center = [x, y]
 
 
 class DWA_Calc:

@@ -15,7 +15,7 @@ def GPS_now():
     msg1 = NavPVT()
     msg2 = NavSatFix()
     while not rospy.is_shutdown():
-        msg1.heading = 0
+        msg1.heading = 180*100000
         msg2.latitude, msg2.longitude = 37.451199251623244, 126.65554189666211 
         msg1.gSpeed = 1
 

@@ -19,7 +19,7 @@ def IMU_now():
         msg.orientation.w = 1.0
         msg.angular_velocity.x = 0.0
         msg.angular_velocity.y = 0.0
-        msg.angular_velocity.z = 10.0
+        msg.angular_velocity.z = 5.0
 
         # rospy.loginfo(msg)
 

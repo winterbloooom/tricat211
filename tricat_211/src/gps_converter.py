@@ -6,7 +6,7 @@ from ublox_msgs.msg import NavPVT
 from sensor_msgs.msg import NavSatFix
 import pymap3d as pm
 from geometry_msgs.msg import Point
-
+from std_msgs.msg import Float32
 
 class GPS_Converter:
     def __init__(self):
@@ -32,7 +32,7 @@ class GPS_Converter:
     def pvt_callback(self, msg):
         #self.gps_boat_lat = msg.lat
         #self.gps_boat_lon = msg.lon
-        self.gps_boat_heading = msg.heading
+        self.gps_boat_heading = msg.heading # hedveh chek plz
 
     def enuPositionPublisher(self):
         enu_position_msg = Point()
@@ -41,6 +41,9 @@ class GPS_Converter:
         enu_position_msg.y = n
         enu_position_msg.z = u
         self.enu_position_pub.publish(enu_position_msg)
+        heading = Float32()
+        heading.data = self.gps_boat_heading * 0.00001  # deg/1e-5 -> deg
+        rospy.loginfo("heading degree : %f", heading.data)
 
 map_list = rospy.get_param("map_dd")
 lat_00, lon_00, alt_00 = map_list['map_00_lat'], map_list['map_00_lon'], map_list['map_00_alt']
@@ -60,9 +63,7 @@ def main():
     gpsconv = GPS_Converter()
     rate = rospy.Rate(20)
     while not rospy.is_shutdown():
-
         gpsconv.enuPositionPublisher()
-
         rate.sleep()
         #rospy.sleep(0.05) # 1 / Hz
     rospy.spin()
