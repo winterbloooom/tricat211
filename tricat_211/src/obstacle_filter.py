@@ -4,13 +4,9 @@ import numpy as np
 import rospy
 import math
 import sys
-from obstacle_detector.msg import Obstacles
-from obstacle_detector.msg import CircleObstacle
-from obstacle_detector.msg import SegmentObstacle
-from tricat_211.msg import FilteringObstacles
-from tricat_211.msg import CircleObstacle
-from tricat_211.msg import FilteringWalls
-from tricat_211.msg import WallObstacle
+from obstacle_detector.msg import Obstacles, CircleObstacle, SegmentObstacle
+from tricat_211.msg import FilteringObstacles, CircleObstacle
+from tricat_211.msg import FilteringWalls, WallObstacle
 
 
 class ObstacleFilter:
