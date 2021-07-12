@@ -1,0 +1,5 @@
+DOCKING : {
+target_box_size : 1200 #temp
+target_class : "Circle" #temp
+target_probability : 0.7 #0~1
+}
