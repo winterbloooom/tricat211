@@ -3,12 +3,10 @@
 import rospy
 import math
 
-from sensor_msgs.msg import Imu
+from sensor_msgs.msg import Imu, NavSatFix
 from ublox_msgs.msg import NavPVT
-from sensor_msgs.msg import NavSatFix
-from tricat_211.msg import Control
-from tricat_211.msg import DWA  # v, yaw_rate float64
-
+from tricat_211.msg import Control, DWA  # thruster, servo, v, yaw_rate float64
+from std_msgs.msg import UInt16           # for `Output`
 
 class PID:
     def __init__(self):
@@ -17,7 +15,7 @@ class PID:
         self.init_thruster = 1500
         self.init_servo = 150
 
-        self.thruster_pwm = 0
+        self.thruster_pwm = 1500
         self.servo_control = 0
 
         self.cur_yaw_rate = 0.0
@@ -31,12 +29,14 @@ class PID:
         self.kd_thruster = 0.01
         self.error_v = 0.0
         self.error_v_sum = 0.0
+        self.prev_v = 0.0 # what is this
 
         self.kp_servo = 1.0
         self.ki_servo = 0.01
         self.kd_servo = 0.001
         self.error_yaw_rate = 0.0
         self.error_yaw_rate_sum = 0.0
+        self.prev_yaw_rate = 0.0 # what is this
 
         self.rate = 20
 
@@ -44,7 +44,8 @@ class PID:
         rospy.Subscriber("/ublox_gps/navpvt", NavPVT, self.gps_data_callback)
         rospy.Subscriber("/best_U", DWA, self.DWA_data_callback)
 
-        self.PID_controller_pub = rospy.Publisher("/control", Control, queue_size=10)
+        self.Servo_pub = rospy.Publisher("/Servo", UInt16, queue_size=10)
+        self.thruster_pub = rospy.Publisher("/thruster", UInt16, queue_size=10)
 
     def imu_data_callback(self, data):
         #self.angular_v_x = data.angular_velocity.x
@@ -52,7 +53,7 @@ class PID:
         self.cur_yaw_rate = data.angular_velocity.z
 
     def gps_data_callback(self, data):
-        self.cur_v = data.gSpeed
+        self.cur_v = data.gSpeed * 0.001 # mm/s -> m/s
 
     def DWA_data_callback(self, data):
         self.optimal_v = data.v
@@ -65,13 +66,16 @@ class PID:
 
         self.ci_thruster = 0
 
-        self.cd_thruster = 0
+
+        v_derivative = (self.cur_v - self.prev_v) / (1 / self.rate)
+        self.prev_v = self.cur_v
+        self.cd_thruster = self.ki_thruster * -v_derivative
 
         self.thruster_pwm = self.init_thruster + self.cp_thruster# + self.ci_thruster + self.cd_thruster
 
         return self.thruster_pwm
 
-    def servo_pid_contoller(self):
+    def servo_pid_controller(self):
         self.error_yaw_rate = self.optimal_yaw_rate - self.cur_yaw_rate
 
         self.cp_servo = self.kp_servo * self.error_yaw_rate
@@ -81,8 +85,8 @@ class PID:
         #    self.error_yaw_rate_sum = 0
         #self.ci_servo =  self.kd_servo * self.error_yaw_rate_sum
  
-        prev_yaw_rate = self.cur_yaw_rate
-        yaw_rate_derivative = (self.cur_yaw_rate - prev_yaw_rate) / (1 / self.rate)
+        yaw_rate_derivative = (self.cur_yaw_rate - self.prev_yaw_rate) / (1 / self.rate)
+        self.prev_yaw_rate = self.cur_yaw_rate
         self.cd_servo = self.ki_servo * -yaw_rate_derivative
 
         #servo_pid = self.cp_servo+ self.ci_servo + self.cd_servo
@@ -93,9 +97,11 @@ class PID:
 
     def control_publisher(self):
         output_msg = Control()
-        output_msg.thruster = self.thruster_pid_controller()
-        output_msg.servo = self.servo_pid_controller()
-        self.PID_controller_pub.publish(output_msg)
+        output_msg.thruster = round(self.thruster_pid_controller())
+        output_msg.servo = round(self.servo_pid_controller())
+        self.thruster_pub.publish(output_msg.thruster)
+        self.Servo_pub.publish(output_msg.servo)
+        
 
 
 def main():
