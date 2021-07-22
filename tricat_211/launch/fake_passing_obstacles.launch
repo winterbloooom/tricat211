@@ -3,12 +3,12 @@
 <launch>
 	<node pkg="tricat_211"  type="Fake_GPS_Publish.py" name="fakeGPS" respawn="true"/>
 	<node pkg="tricat_211"  type="Fake_imu_Publish.py" name="fakeIMU" respawn="true"/>
-	<!--<node pkg="tricat_211"  type="Fake_magnetic_Publish.py" name="fakeMagneticField" respawn="true"/>-->
+	<node pkg="tricat_211"  type="Fake_magnetic_Publish.py" name="fakeMagneticField" respawn="true"/>
 
 	<node pkg="tricat_211"  type="gps_converter.py" name="GPS_Converter" respawn="true"/>
 
-	<node pkg="tricat_211"  type="imu_converter.py" name="IMU_Converter" respawn="true"/>
-	<!--<node pkg="tricat_211"  type="compass_from_magnetic_field.py" name="Compass" respawn="true"/>-->
+	<!--<node pkg="tricat_211"  type="imu_converter.py" name="IMU_Converter" respawn="true"/>-->
+	<node pkg="tricat_211"  type="compass_from_magnetic_field.py" name="Compass" respawn="true"/>
 
 	<node pkg="tricat_211"  type="obstacle_filter.py" name="Obstacle_Filter" respawn="true"/>
 
