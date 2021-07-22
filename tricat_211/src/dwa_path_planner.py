@@ -4,6 +4,7 @@ import math
 from enum import Enum # delete check plz
 import numpy as np
 import rospy
+import pymap3d as pm
 
 from std_msgs.msg import String
 from obstacle_detector.msg import Obstacles, CircleObstacle, SegmentObstacle
@@ -37,23 +38,28 @@ class Boat:
 
 class Goal:
     def __init__(self):
+        map_list = rospy.get_param("map_dd")
+        self.lat_00, self.lon_00, self.alt_00 = self.map_list['map_00_lat'], self.map_list['map_00_lon'], self.map_list['map_00_alt']
+        
         #temp list // should sort the elements??
-        self.goal_list = np.array([[-1, -1],
-                            [0, 2],
-                            [4.0, 2.0],
-                            [5.0, 4.0],
-                            [5.0, 5.0],
-                            [5.0, 6.0],
-                            [5.0, 9.0],
-                            [8.0, 9.0],
-                            [7.0, 9.0],
-                            [8.0, 10.0],
-                            [9.0, 11.0],
-                            [12.0, 13.0],
-                            [12.0, 12.0],
-                            [15.0, 15.0],
-                            [13.0, 13.0]]
-                            )
+        # gps dd waypoint
+        self.way_list_gps = np.array([[37.44801141028958, 126.6534866483131, 20.0],
+                                      [37.44807209873907, 126.65347927223846, 20.0],
+                                      [37.448090731147886, 126.65353492807438, 20.0],
+                                      [37.44799277786102, 126.65345513235782, 20.0]])
+
+        self.way_list = self.get_xy(self.way_list_gps)
+        
+
+    def get_xy(self, points):
+        way_list = np.zeros_like(points)
+        for i in range(len(points)):
+            way_list[i][0], way_list[i][1] , way_list[i][2] = \
+                pm.geodetic2enu(points[i][0], points[i][1], points[i][2], \
+                 self.lat_00, self.lon_00, self.alt_00)
+        way_list = np.delete(way_list, 2, axis=1)
+        return way_list
+
 
     def insert_goal_point(self):
         pass
@@ -136,7 +142,7 @@ class DWA_Calc:
                 speed_cost = self.speed_cost_gain * (self.max_speed - trajectory[-1, 3])
                 ob_cost = self.obstacle_cost_gain * self.calc_obstacle_cost(trajectory)
 
-                final_cost = to_goal_cost + speed_cost + ob_cost
+                final_cost = to_goal_cost + speed_cost + ob_cost# 1>>>  2>  3>>
 
                 if min_cost >= final_cost:
                     min_cost = final_cost
@@ -165,18 +171,18 @@ class DWA_Calc:
         rot = np.transpose(rot, [2, 0, 1])
 
 
-        '''local_ob = self.obstacles[:, None] - trajectory[:, 0:2]
+        local_ob = self.obstacles[:, None] - trajectory[:, 0:2]
         local_ob = local_ob.reshape(-1, local_ob.shape[-1])
         local_ob = np.array([local_ob.dot(x) for x in rot])
         local_ob = local_ob.reshape(-1, local_ob.shape[-1])
 
-        upper_check = local_ob[:, 0] <= self.boat_length / 2
+        upper_check = local_ob[:, 0] <= 0.3
         right_check = local_ob[:, 1] <= self.boat_width / 2
-        bottom_check = local_ob[:, 0] >= -self.boat_length / 2
+        bottom_check = local_ob[:, 0] >= -self.boat_length
         left_check = local_ob[:, 1] >= -self.boat_width / 2
         if (np.logical_and(np.logical_and(upper_check, right_check),
                            np.logical_and(bottom_check, left_check))).any():
-            return float("Inf")'''
+            return float("Inf")
 
         return 1.0 / min_r
 

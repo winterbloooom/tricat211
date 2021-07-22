@@ -7,12 +7,11 @@ import numpy as np
 import cv2
 import pyrealsense2 as rs2
 
-from darknet_ros_msgs.msg import BoundingBoxes
-from darknet_ros_msgs.msg import BoundingBox
+from darknet_ros_msgs.msg import BoundingBoxes, BoundingBox
 from tricat_211.msg import HeadingAngle
-from tricat_211.msg import FilteringObstacles
-from tricat_211.msg import FilteringWalls
+from tricat_211.msg import FilteringWalls, FilteringObstacles
 from tricat_211.msg import DockingMsg
+from std_msgs.msg import Control, UInt16           # for `Output`
 
 file_name = "/Users/woogkingzzang/PycharmProjects/Open CV/opencv_dnn_202005/video/yolo_01.mp4"
 weight_file = "/Users/woogkingzzang/PycharmProjects/Open CV/opencv_dnn_202005/yolo/yolov3.weights"
@@ -51,7 +50,17 @@ class Docking():
         self.direction_to_target = ""
         self.angle_to_target = 0.0
         
+        ## control
+        self.Servo_pub = rospy.Publisher("/Servo", UInt16, queue_size=10)
+        self.thruster_pub = rospy.Publisher("/thruster", UInt16, queue_size=10)
 
+    def control_publisher(self):
+        output_msg = Control()
+        output_msg.thruster = 1600
+        output_msg.servo = round(self.angle)
+        self.thruster_pub.publish(output_msg.thruster)
+        self.Servo_pub.publish(output_msg.servo)
+        
     def camera_callback(self, msg):
         # get message from camera scanning
         if len(msg.bounding_boxes) != 0: #if not working, use 'counting msg'
@@ -157,7 +166,7 @@ class Docking():
                 # temporary ROI => adjust while field test, use param
                 #Left
                 if boxx < 425:
-                    servo = map_func(boxx,0, 425, 0, 80 ) # servo
+                    servo = map_func(boxx, 0, 425, 0, 80 ) # servo 0~80 edit need
                     # forward signal = 1
                     self.direction = "ROTATE"
                     self.angle = servo

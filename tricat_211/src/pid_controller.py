@@ -10,13 +10,15 @@ from std_msgs.msg import UInt16           # for `Output`
 
 class PID:
     def __init__(self):
+        PID_config = rospy.get_param("PID")
+
         #self.angular_v_x = 0.0
         #self.angular_v_y = 0.0
         self.init_thruster = 1500
         self.init_servo = 150
 
         self.thruster_pwm = 1500
-        self.servo_control = 0
+        self.servo_control = 150
 
         self.cur_yaw_rate = 0.0
         self.cur_v = 0.0
@@ -24,21 +26,21 @@ class PID:
         self.optimal_v = 0.0
         self.optimal_yaw_rate = 0.0
 
-        self.kp_thruster = 50.0
-        self.ki_thruster = 0.1
-        self.kd_thruster = 0.01
+        self.kp_thruster = PID_config['kp_thruster']
+        self.ki_thruster = PID_config['ki_thruster']
+        self.kd_thruster = PID_config['kd_thruster']
         self.error_v = 0.0
         self.error_v_sum = 0.0
         self.prev_v = 0.0 # what is this
 
-        self.kp_servo = 1.0
-        self.ki_servo = 0.01
-        self.kd_servo = 0.001
+        self.kp_servo = PID_config['kp_servo']
+        self.ki_servo = PID_config['ki_servo']
+        self.kd_servo = PID_config['kd_servo']
         self.error_yaw_rate = 0.0
         self.error_yaw_rate_sum = 0.0
         self.prev_yaw_rate = 0.0 # what is this
 
-        self.rate = 20
+        self.rate = PID_config['rate']
 
         rospy.Subscriber("/imu/data", Imu, self.imu_data_callback)
         rospy.Subscriber("/ublox_gps/navpvt", NavPVT, self.gps_data_callback)
@@ -66,12 +68,11 @@ class PID:
 
         self.ci_thruster = 0
 
-
-        v_derivative = (self.cur_v - self.prev_v) / (1 / self.rate)
+        v_derivative = (self.cur_v - self.prev_v) / 0.05 # division 1 / self.rate  # replaced with accel for drivative kick
         self.prev_v = self.cur_v
         self.cd_thruster = self.ki_thruster * -v_derivative
 
-        self.thruster_pwm = self.init_thruster + self.cp_thruster# + self.ci_thruster + self.cd_thruster
+        self.thruster_pwm = self.thruster_pwm + self.cp_thruster + self.cd_thruster# + self.ci_thruster 
 
         return self.thruster_pwm
 
@@ -85,13 +86,13 @@ class PID:
         #    self.error_yaw_rate_sum = 0
         #self.ci_servo =  self.kd_servo * self.error_yaw_rate_sum
  
-        yaw_rate_derivative = (self.cur_yaw_rate - self.prev_yaw_rate) / (1 / self.rate)
+        yaw_rate_derivative = (self.cur_yaw_rate - self.prev_yaw_rate) / 0.05 # division 1 / self.rate
         self.prev_yaw_rate = self.cur_yaw_rate
         self.cd_servo = self.ki_servo * -yaw_rate_derivative
 
         #servo_pid = self.cp_servo+ self.ci_servo + self.cd_servo
         servo_pd = self.cp_servo + self.cd_servo
-        self.servo_control = self.init_servo + servo_pd
+        self.servo_control = self.servo_control + servo_pd
 
         return self.servo_control
 

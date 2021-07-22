@@ -11,7 +11,8 @@ from tricat_211.msg import FilteringWalls, WallObstacle
 
 class ObstacleFilter:
     def __init__(self):
-        self.decision_range = 2 # [m] for obstacle_judge check range
+        ob_config = rospy.get_param("OB")
+        self.decision_range = ob_config['decision_range']
 
         self.obstacle_list = [] #get list from lidar
         self.segment_list = []
@@ -60,7 +61,8 @@ class ObstacleFilter:
             w_end_x = walls[i].last_point.x
             w_end_y = walls[i].last_point.y
             w_distance = distance_boat_to_wall(w_start_x, w_start_y, w_end_x, w_end_y)
-            if distance_decision(self.decision_range, w_distance):
+            w_length = (w_end_x - w_start_x) ** 2 + (w_end_y - w_start_y) ** 2
+            if distance_decision(self.decision_range, w_distance) and abs(w_length) > 1:
                 w_info = np.array([[w_start_x, w_start_y, w_end_x, w_end_y, w_distance]])
                 self.filter_wall_list = np.append(self.filter_wall_list, w_info, axis = 0)
                 

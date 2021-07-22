@@ -5,7 +5,7 @@ import rospy
 from std_msgs.msg import Float32
 from sensor_msgs.msg import MagneticField
 from geometry_msgs.msg import Vector3
-from msg_package.msg import HeadingAngle
+from tricat_211.msg import HeadingAngle
 
 
 class Heading_Angle:
@@ -17,12 +17,7 @@ class Heading_Angle:
         self.magnetic_z = 0.0
         self.mAzimuth = 0.0
 
-        self.HeadingAngle_pub = rospy.Publisher("/magnetic_bearing", HeadingAngle, queue_size=10)
-
-    '''def Magnetic_callback(self,magnetic_field):
-        self.magnetic_x = magnetic_field.x
-        self.magnetic_y = magnetic_field.y
-        self.magnetic_z = magnetic_field.z '''
+        self.HeadingAngle_pub = rospy.Publisher("/bearing", HeadingAngle, queue_size=10)
     
     def Magnetic_callback(self,MagneticField):
         self.magnetic_x = MagneticField.magnetic_field.x
@@ -127,20 +122,20 @@ class Heading_Angle:
     def calculation(self):
         gravity = [0, 0, -9.8]
         geomagnetic = [self.magnetic_x *  10**6, self.magnetic_y *  10**6, self.magnetic_z *  10**6] 
-        print(geomagnetic)
+        #print(geomagnetic)
         R = [0]*9
         orientation = [0] * 3
         success = self.getRotationMatrix(R, None, gravity, geomagnetic)
         if success is True:
             self.getOrientation(R, orientation)
             self.mAzimuth = orientation[0] * 180 / math.pi
-            #mPitch = orientation[1] * 180 / math.pi
-            #mRoll = orientation[2] * 180 / math.pi
+        
+        h = HeadingAngle()
+        h.bearing = round(self.mAzimuth, 2)
 
-        self.HeadingAngle = self.mAzimuth
-
-        self.HeadingAngle_pub.publish(self.HeadingAngle)
-        #rospy.loginfo("Heading angle : {%f}", self.HeadingAngle)
+        self.HeadingAngle_pub.publish(h)
+        rospy.loginfo("Heading angle : {%f}", round(self.mAzimuth, 2))
+        
         
 def main():
     rospy.init_node('Compass', anonymous=False)
