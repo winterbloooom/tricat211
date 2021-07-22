@@ -14,14 +14,14 @@ yaw_rate_resolution : 0.1, # * math.pi / 180.0  # [rad/s]
 dt : 0.1,  # [s] Time tick for motion prediction
 predict_time : 3.0, # [s]
 
-to_goal_cost_gain : 0.15,
-speed_cost_gain : 1.0,
+to_goal_cost_gain : 2.0,
+speed_cost_gain : 0.5,
 obstacle_cost_gain : 1.0,
 
-stuck_flag_cons : 0.001,  # constant to prevent robot stucked
-boat_width : 0.5, # [m] for collision check
-boat_length : 1.2,
+stuck_flag_cons : 0.01,  # constant to prevent robot stucked
+boat_width : 0.8, # [m] for collision check
+boat_length : 1.4,
 
-goal_range : 3 # [m] for goal check
+goal_range : 1 # [m] for goal check
 }
 

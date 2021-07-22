@@ -1,7 +1,7 @@
 map_dd : {
-  map_00_lat : 37.4512950713849, #pool 1 and pool 2 posibility 
-  map_00_lon : 126.65542387946974,
-  map_00_alt : 50.0,
+  map_00_lat : 37.448002351837694, #pool 1 and pool 2 posibility
+  map_00_lon : 126.6533954619325,
+  map_00_alt : 20.0,
   map_0y_lat : 37.45125514649911,
   map_0y_lon : 126.65556670709458,
   map_x0_lat : 37.45123704721054,
