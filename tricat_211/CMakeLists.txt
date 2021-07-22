@@ -58,6 +58,7 @@ add_message_files(
     Control.msg
     FilteringWalls.msg
     WallObstacle.msg
+    DockingMsg.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -202,7 +203,7 @@ include_directories(
 # )
 
 #############
-## Testing ##
+## Testing ##ockingMsg.msg
 #############
 
 ## Add gtest based cpp test target and link libraries
