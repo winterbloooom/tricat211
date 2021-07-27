@@ -10,6 +10,7 @@ from std_msgs.msg import String
 from obstacle_detector.msg import Obstacles, CircleObstacle, SegmentObstacle
 from geometry_msgs.msg import Point
 from tricat_211.msg import HeadingAngle, FilteringObstacles, FilteringWalls, DWA
+from tricat_211.msg import FilteringWallsDWA, WallParticle
 
 class Boat:
     def __init__(self):
@@ -38,42 +39,28 @@ class Boat:
 
 class Goal:
     def __init__(self):
-        map_list = rospy.get_param("map_dd")
-        self.lat_00, self.lon_00, self.alt_00 = self.map_list['map_00_lat'], self.map_list['map_00_lon'], self.map_list['map_00_alt']
+        self.map_list = rospy.get_param("map_dd")
+
+        self.origin = [self.map_list['map_00_lat'], self.map_list['map_00_lon'], self.map_list['map_00_alt']]
+        # self.lat_00, self.lon_00, self.alt_00 = self.map_list['map_00_lat'], self.map_list['map_00_lon'], self.map_list['map_00_alt']
         
-        #temp list // should sort the elements??
-        # gps dd waypoint
-        self.way_list_gps = np.array([[37.44801141028958, 126.6534866483131, 20.0],
-                                      [37.44807209873907, 126.65347927223846, 20.0],
-                                      [37.448090731147886, 126.65353492807438, 20.0],
-                                      [37.44799277786102, 126.65345513235782, 20.0]])
-
-        self.way_list = self.get_xy(self.way_list_gps)
+        self.waypoints = rospy.get_param("waypoint_List/waypoints")
+        self.way_list_gps = np.empty((0,3), float)
+        for i in range(len(self.waypoints)):
+            self.way_list_gps = np.append(self.way_list_gps, np.array([self.waypoints[i]]), axis=0)
+            
+        self.way_list = get_xy(self.way_list_gps, self.origin)
         
-
-    def get_xy(self, points):
-        way_list = np.zeros_like(points)
-        for i in range(len(points)):
-            way_list[i][0], way_list[i][1] , way_list[i][2] = \
-                pm.geodetic2enu(points[i][0], points[i][1], points[i][2], \
-                 self.lat_00, self.lon_00, self.alt_00)
-        way_list = np.delete(way_list, 2, axis=1)
-        return way_list
-
-
-    def insert_goal_point(self):
-        pass
-
-    def remove_goal_point(self):
-        pass
+    
 
     def set_next_point(self):
-        self.goal_list = np.delete(self.goal_list, 0, axis = 0)
+        self.way_list = np.delete(self.way_list, 0, axis = 0)
 
 
 class DWA_Calc:
     def __init__(self):
         dwa_config = rospy.get_param("DWA")
+        edge_points = rospy.get_param("edge_dd")
 
         self.max_speed = dwa_config['max_speed']  # [m/s]
         self.min_speed = dwa_config['min_speed']  # [m/s]
@@ -88,13 +75,21 @@ class DWA_Calc:
         self.speed_cost_gain = dwa_config['speed_cost_gain']
         self.obstacle_cost_gain = dwa_config['obstacle_cost_gain']
         self.stuck_flag_cons = dwa_config['stuck_flag_cons']  # constant to prevent robot stucked
+        self.safey_radius = dwa_config['safey_distance']
 
         self.boat_width = dwa_config['boat_width']  # [m] for collision check
         self.boat_length = dwa_config['boat_length']  # [m] for collision check
         self.goal_range = dwa_config['goal_range'] # [m]
 
-        self.obstacles = np.array([])
-        self.walls = np.array([])
+        self.edge1 = [edge_points['map_00_lat'], edge_points['map_00_lon'], 20]
+        self.edge2 = [edge_points['map_0y_lat'], edge_points['map_0y_lon'], 20]
+        self.edge3 = [edge_points['map_x0_lat'], edge_points['map_x0_lon'], 20]
+        self.edge4 = [edge_points['map_xy_lat'], edge_points['map_xy_lon'], 20]
+        self.edge_points = [self.edge1, self.edge2, self.edge3, self.edge4]
+
+        self.class_obstacle = Ob()
+        self.obstacles = self.class_obstacle.ob_list
+        # self.walls = self.class_obstacle.w_list
         self.boat = Boat()
         self.goal_x = 0.0
         self.goal_y = 0.0
@@ -103,6 +98,10 @@ class DWA_Calc:
         self.best_u = []
 
         self.dwa_pub = rospy.Publisher("/best_U", DWA, queue_size=10)
+
+    def obstacle_init(self):
+        self.obstacles = self.class_obstacle.ob_list
+        # self.walls = self.class_obstacle.w_list
 
     def arrival_check(self):
         dist_to_goal = math.hypot(self.boat.x - self.goal[0], self.boat.y - self.goal[1])
@@ -140,9 +139,12 @@ class DWA_Calc:
 
                 to_goal_cost = self.to_goal_cost_gain * self.calc_to_goal_cost(trajectory)
                 speed_cost = self.speed_cost_gain * (self.max_speed - trajectory[-1, 3])
-                ob_cost = self.obstacle_cost_gain * self.calc_obstacle_cost(trajectory)
 
-                final_cost = to_goal_cost + speed_cost + ob_cost# 1>>>  2>  3>>
+                if len(self.obstacles) != 0 : #or len(self.walls)
+                    ob_cost = self.obstacle_cost_gain * self.calc_obstacle_cost(trajectory)
+                    final_cost = to_goal_cost + speed_cost + ob_cost # 1>>>  2>  3>>
+                else:
+                    final_cost = to_goal_cost + speed_cost
 
                 if min_cost >= final_cost:
                     min_cost = final_cost
@@ -161,22 +163,30 @@ class DWA_Calc:
         for i in range(len(trajectory)):
             for j in range(len(self.obstacles)):
                 dx = trajectory[i, 0] - self.obstacles[j, 0]
-                dy = trajectory[i, 0] - self.obstacles[j, 0]
+                dy = trajectory[i, 1] - self.obstacles[j, 1]
                 r = np.hypot(dx, dy)
                 if min_r >= r:
                     min_r = r
+        
+        # for i in range(len(trajectory)):
+        #     for j in range(len(self.walls)):
+        #         dx = trajectory[i, 0] - self.walls[j, 0]
+        #         dy = trajectory[i, 1] - self.walls[j, 1]
+        #         r = np.hypot(dx, dy)
+        #         if min_r >= r:
+        #             min_r = r
 
         yaw = trajectory[:, 2]
         rot = np.array([[np.cos(yaw), -np.sin(yaw)], [np.sin(yaw), np.cos(yaw)]])
         rot = np.transpose(rot, [2, 0, 1])
-
-
+        
         local_ob = self.obstacles[:, None] - trajectory[:, 0:2]
+
         local_ob = local_ob.reshape(-1, local_ob.shape[-1])
         local_ob = np.array([local_ob.dot(x) for x in rot])
         local_ob = local_ob.reshape(-1, local_ob.shape[-1])
 
-        upper_check = local_ob[:, 0] <= 0.3
+        upper_check = local_ob[:, 0] <= 0.3  #set with param?????????????
         right_check = local_ob[:, 1] <= self.boat_width / 2
         bottom_check = local_ob[:, 0] >= -self.boat_length
         left_check = local_ob[:, 1] >= -self.boat_width / 2
@@ -203,80 +213,140 @@ class DWA_Calc:
         boat_pos = np.array(boat_init)
         trajectory = np.array(boat_pos)
         time = 0
+
         while time <= self.predict_time:
-            boat_pos = self.motion(boat_pos, [v, yaw_rate])
-            trajectory = np.vstack((trajectory, boat_pos))
+            temp_boat_pos = boat_pos
+            temp_boat_pos[2] += yaw_rate * self.dt # yaw_rate yaw
+            temp_boat_pos[0] += v * math.cos(temp_boat_pos[2]) * self.dt # v x
+            temp_boat_pos[1] += v * math.sin(temp_boat_pos[2]) * self.dt # v y
+            temp_boat_pos[3] = v  # v v
+            temp_boat_pos[4] = yaw_rate  # yaw_rate yaw_rate
+
+            if self.check_line_out([boat_pos[0], boat_pos[1]]): #go out
+                continue
+            else:               
+                trajectory = np.vstack((trajectory, temp_boat_pos))
+                boat_pos = temp_boat_pos
+
             time += self.dt
 
         return trajectory
 
-    def motion(self, boat_pos, u):
-        boat_pos[2] += u[1] * self.dt
-        boat_pos[0] += u[0] * math.cos(boat_pos[2]) * self.dt
-        boat_pos[1] += u[0] * math.sin(boat_pos[2]) * self.dt
-        boat_pos[3] = u[0]  
-        boat_pos[4] = u[1]  
+    def check_line_out(self, point):
+        crossed = 0
+        d_line_point = float("Inf")
 
-        return boat_pos
+        for i in range(4):
+            j = (i+1)%4
+            if(self.edge_points[i][1] > point[1]) != (self.edge_points[j][1] > point[1]):
+                intersection = float((self.edge_points[j][0] - self.edge_points[i][0]) * (point[1]-self.edge_points[i][1]) \
+                     / (self.edge_points[j][1] - self.edge_points[i][1]) + self.edge_points[i][0])
+                if point[0] < intersection:
+                    crossed += 1
+                area = abs((self.edge_points[i][0] - point[0]) * (self.edge_points[j][1] - point[1]) \
+                    - (self.edge_points[i][1] - point[1]) * (self.edge_points[j][0] - point[0]))
+                p_to_p = math.sqrt((self.edge_points[i][0] - self.edge_point[j][0]) ** 2 + (self.edge_points[i][1] - self.edge_points[j][1]) ** 2 )
+                d = area / p_to_p
+                if d < d_line_point:
+                    d_line_point = d
+
+        if (crossed % 2) == 0 or d < self.safey_distance:
+            return True #go out
+        else :
+            return False
 
 
 class Ob:
     def __init__(self):
-        self.f_obstacle_list = []
-        self.f_wall_list = []
-
         self.ob_list = np.array([])
         self.ob_x_list = np.array([])
         self.ob_y_list = np.array([])
 
+        # self.w_list = np.array([])
+        # self.w_start_x_list = np.array([])
+        # self.w_start_y_list = np.array([])
+        # self.w_end_x_list = np.array([])
+        # self.w_end_y_list = np.array([])
         self.w_list = np.array([])
-        self.w_start_x_list = np.array([])
-        self.w_start_y_list = np.array([])
-        self.w_end_x_list = np.array([])
-        self.w_end_y_list = np.array([])
+        self.w_x_list = np.array([])
+        self.w_y_list = np.array([])
 
         rospy.Subscriber('/filtering_obstacles', FilteringObstacles, self.filtering_obstacle_callback)
-        rospy.Subscriber('/filtering_walls', FilteringWalls, self.filtering_wall_callback)
+        # rospy.Subscriber('/filtering_walls', FilteringWalls, self.filtering_wall_callback)
+        rospy.Subscriber('/filtering_walls', FilteringWallsDWA, self.filtering_wall_callback)
 
     def filtering_obstacle_callback(self, msg):
-        self.f_obstacles = msg.circles
-        for i in range(len(self.f_obstacle_list)):
-            self.ob_x_list = np.append(self.ob_x_list, self.f_obstacle_list[i].x)
-            self.ob_y_list = np.append(self.ob_y_list, self.f_obstacle_list[i].y)
+        f_obstacles = msg.circles
+        for i in range(len(f_obstacles)):
+            self.ob_x_list = np.append(self.ob_x_list, f_obstacles[i].x)
+            self.ob_y_list = np.append(self.ob_y_list, f_obstacles[i].y)
         self.ob_list = np.column_stack([self.ob_x_list, self.ob_y_list])
 
+    # def filtering_wall_callback(self, msg):
+    #     f_walls = msg.walls
+    #     for i in range(len(self.f_walls)):
+    #         self.w_start_x_list = np.append(self.w_start_x_list, f_walls[i].start_x)
+    #         self.w_start_y_list = np.append(self.w_start_y_list, f_walls[i].start_y)
+    #         self.w_end_x_list = np.append(self.w_end_x_list, f_walls[i].end_x)
+    #         self.w_end_y_list = np.append(self.w_end_x_list, f_walls[i].end_y)
+    #     self.w_list = np.column_stack([self.w_start_x_list, self.w_start_y_list, self.w_end_x_list, self.w_end_y_list])
+
     def filtering_wall_callback(self, msg):
-        self.f_walls = msg.walls
-        for i in range(len(self.f_wall_list)):
-            self.w_start_x_list = np.append(self.w_start_x_list, self.f_wall_list[i].start_x)
-            self.w_start_y_list = np.append(self.w_start_y_list, self.f_wall_list[i].start_y)
-            self.w_end_x_list = np.append(self.w_end_x_list, self.f_wall_list[i].end_x)
-            self.w_end_y_list = np.append(self.w_end_x_list, self.f_wall_list[i].end_y)
-        self.w_list = np.column_stack([self.w_start_x_list, self.w_start_y_list, self.w_end_x_list, self.w_end_y_list])
+        f_walls = msg.particle
+        for i in range(len(f_walls)):
+            self.w_x_list = np.append(self.w_x_list, f_walls[i].x)
+            self.w_y_list = np.append(self.w_y_list, f_walls[i].y)
+        self.ob_list = np.column_stack([self.w_x_list, self.w_y_list])
+
+
+def get_xy(points, origin):
+    way_list = np.zeros_like(points)
+    for i in range(len(points)):
+        way_list[i][0], way_list[i][1] , way_list[i][2] = \
+            pm.geodetic2enu(points[i][0], points[i][1], points[i][2], \
+                origin[0], origin[1], origin[2])
+    way_list = np.delete(way_list, 2, axis=1)
+    return way_list
+
+
+def shutdownhook():
+    print("End the programe") #no meaning
 
 
 def main():
     rospy.init_node('DWA', anonymous=False)
+    rate = rospy.Rate(1)
 
     goal = Goal()
-    obstacle = Ob()
     dwa_path = DWA_Calc()
 
+    dwa_path.goal_x = goal.way_list[0][0]
+    dwa_path.goal_y = goal.way_list[0][1]
+    
     while not rospy.is_shutdown():
+        print(dwa_path.obstacles)        
+        print("----")
+
         if dwa_path.arrival_check():
-            if len(goal.goal_list) == 0:
+            if len(goal.way_list) == 0:
+                rospy.on_shutdown(shutdownhook)
                 break  #arrived final goal
+            elif len(goal.way_list) == 1:
+                dwa_path.goal_x = goal.way_list[0][0]
+                dwa_path.goal_y = goal.way_list[0][1]
+                goal.set_next_point()
             else:
                 goal.set_next_point()
-                dwa_path.goal_x = goal.goal_list[0][0]
-                dwa_path.goal_y = goal.goal_list[0][1]
+                dwa_path.goal_x = goal.way_list[0][0]
+                dwa_path.goal_y = goal.way_list[0][1]
+                
 
-        dwa_path.obstacles = obstacle.ob_list
-        dwa_path.walls = obstacle.w_list
+        dwa_path.obstacle_init()
         dwa_path.dwa_control()
         dwa_path.DWAPublisher()
         
-        rospy.sleep(1)
+        rate.sleep()
+        # rospy.sleep(1)
 
     rospy.spin()
 

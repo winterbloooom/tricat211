@@ -21,7 +21,7 @@ names_file = "/Users/woogkingzzang/PycharmProjects/Open CV/opencv_dnn_202005/yol
 ###### Docking Class ######
 class Docking():
     def __init__(self):
-        docking_config = rospy.get_param("DOCKING")
+        docking_config = rospy.get_param("IMG")
 
         ## ROS
         self.direction = ""
