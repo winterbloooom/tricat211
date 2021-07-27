@@ -59,6 +59,8 @@ add_message_files(
     FilteringWalls.msg
     WallObstacle.msg
     DockingMsg.msg
+    FilteringWallsDWA.msg
+    WallParticle.msg
 )
 
 ## Generate services in the 'srv' folder
