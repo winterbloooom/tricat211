@@ -1,0 +1,54 @@
+OB : {
+decision_range : 2, #[m]
+min_confidence : 0.7 #0~1
+}
+
+map_dd : {
+map_00_lat : 37.448002351837694,
+map_00_lon : 126.6533954619325,
+map_00_alt : 20.0
+}
+
+edge_dd : {
+  map_00_lat : 37.448002351837694,
+  map_00_lon : 126.6533954619325,
+  map_00_alt : 20.0,
+  map_0y_lat : 37.45125514649911,
+  map_0y_lon : 126.65556670709458,
+  map_x0_lat : 37.45123704721054,
+  map_x0_lon : 126.65539705738055,
+  map_xy_lat : 37.451199251623244, 
+  map_xy_lon : 126.65554189666211
+  }
+
+DWA : {
+max_speed : 1.0,  #[m/s]
+min_speed : -0.5, #[m/s]
+
+max_accel : 0.2, #[m/ss]
+
+max_yaw_rate : 40.0, # * math.pi / 180.0  # [rad/s]
+
+max_delta_yaw_rate : 40.0, # * math.pi / 180.0  # [rad/ss]
+
+v_resolution : 0.01,  # [m/s]
+yaw_rate_resolution : 0.1, # * math.pi / 180.0  # [rad/s]
+
+dt : 0.1,  # [s] Time tick for motion prediction
+predict_time : 3.0, # [s]
+
+to_goal_cost_gain : 2.0,
+speed_cost_gain : 0.5,
+obstacle_cost_gain : 1.0,
+
+stuck_flag_cons : 0.01,  # constant to prevent robot stucked
+boat_width : 0.8, # [m] for collision check
+boat_length : 1.4,
+
+goal_range : 1 # [m] for goal check
+}
+
+IMG : {
+target_class : "Circle", #temp
+min_confidence : 0.7 #0~1
+}

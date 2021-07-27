@@ -1,0 +1,29 @@
+map_dd : {
+  map_00_lat : 37.4480416, # inha univ pool
+  map_00_lon : 126.6534168,
+  map_00_alt : 30.0
+  }
+
+waypoint_List: {  # kyeong jun notion 
+  waypoints:
+  [ 
+    ['37.4480288', '126.6535068', '30.0'],
+    ['37.4481257', '126.6535728', '30.0'],
+    ['37.4481418', '126.6535064', '30.0'],
+    ['37.448033', '126.6534453', '30.0']
+
+  ],
+  }
+
+waypoint_distance_tolerance : 1.5
+# for `Waypoints` reached judgement
+
+kp_servo : 0.5
+
+thruster_power : 1570
+
+OB : {
+decision_range : 4, #[m]
+ # min_confidence : 0.7 #0~1
+min_wall_length : 1 # 0726
+}
