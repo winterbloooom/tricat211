@@ -17,8 +17,7 @@
 	
 	<!--<node pkg="tricat_211" type="serial_node.py" name="arduino" args="/dev/ttyACM0" respawn="true"/>-->
 
-	<rosparam command="load" file="$(find tricat_211)/params/parameter_docking.yaml"/>
-	<rosparam command="load" file="$(find tricat_211)/params/parameter_gps_convert.yaml"/>
+	<rosparam command="load" file="$(find tricat_211)/params/doking_param.yaml"/>
 
 	<include file="$(find obstacle_detector)/launch/virtual_scanner.launch"/>
 
