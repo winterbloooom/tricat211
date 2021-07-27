@@ -130,21 +130,20 @@ class Heading_Angle:
             self.getOrientation(R, orientation)
             self.mAzimuth = orientation[0] * 180 / math.pi
         
-        h = HeadingAngle()
-        h.bearing = round(self.mAzimuth, 2)
+        heading = HeadingAngle()
+        heading.bearing = round(self.mAzimuth, 2)
 
-        self.HeadingAngle_pub.publish(h)
-        rospy.loginfo("Heading angle : {%f}", round(self.mAzimuth, 2))
+        self.HeadingAngle_pub.publish(heading)
+        #rospy.loginfo("Heading angle : {%f}", round(self.mAzimuth, 2))
         
         
 def main():
     rospy.init_node('Compass', anonymous=False)
     rate = rospy.Rate(10)  # 10 Hz renew
 
-    Heading=Heading_Angle()
+    heading=Heading_Angle()
     while not rospy.is_shutdown():
-        
-        Heading.calculation()
+        heading.calculation()
         rate.sleep()
 
 if __name__ == '__main__':
