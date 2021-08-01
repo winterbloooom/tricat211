@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<launch>
+	<node pkg="tricat_211"  type="Fake_GPS_Publish.py" name="fakeGPS" respawn="true"/>
+	<node pkg="tricat_211"  type="Fake_imu_Publish.py" name="fakeIMU" respawn="true"/>
+	<node pkg="tricat_211"  type="Fake_magnetic_Publish.py" name="fakeMagneticField" respawn="true"/>
+
+	<node pkg="tricat_211"  type="gps_converter.py" name="GPS_Converter" respawn="true"/>
+
+	<!--<node pkg="tricat_211"  type="imu_converter.py" name="IMU_Converter" respawn="true"/>-->
+	<node pkg="tricat_211"  type="compass_from_magnetic_field.py" name="Compass" respawn="true"/>
+
+	<node pkg="tricat_211"  type="obstacle_filter.py" name="Obstacle_Filter" respawn="true"/>
+
+	<node pkg="tricat_211"  type="dwa_path_planner.py" name="DWA_PP" respawn="true"/>
+
+	<node pkg="tricat_211"  type="pid_controller.py" name="PD_Controller" respawn="true"/>
+	
+	<!--<node pkg="tricat_211" type="serial_node.py" name="arduino" args="/dev/ttyACM0" respawn="true"/>-->
+
+	<rosparam command="load" file="$(find tricat_211)/params/parameter_dwa_weight.yaml"/>
+	<rosparam command="load" file="$(find tricat_211)/params/parameter_gps_convert.yaml"/>
+	<rosparam command="load" file="$(find tricat_211)/params/parameter_obstacle.yaml"/>
+	<rosparam command="load" file="$(find tricat_211)/params/parameter_pid_controller.yaml"/>
+
+	<include file="$(find obstacle_detector)/launch/virtual_scanner.launch"/>
+
+	<node name="rqt" pkg="rqt_graph" type="rqt_graph"/>
+
+</launch>
