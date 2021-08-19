@@ -2,21 +2,18 @@
 
 <launch>
 <!--FAKE-->
-	<!--<node pkg="tricat_211"  type="Fake_GPS_Publish.py" name="fakeGPS" respawn="true"/>-->
-	<!--<node pkg="tricat_211"  type="Fake_imu_Publish.py" name="fakeIMU" respawn="true"/>-->
-	<!--<node pkg="tricat_211"  type="Fake_magnetic_Publish.py" name="fakeMagneticField" respawn="true"/>-->
-	<!--<node pkg="tricat_211"  type="compass_from_magnetic_field.py" name="Compass" respawn="true"/>-->
 	<!--<include file="$(find obstacle_detector)/launch/virtual_scanner.launch"/>-->
 
 <!--211Node-->
 	<node pkg="tricat_211"  type="gps_converter.py" name="ENU_Converter" respawn="true"/>
 	<node pkg="tricat_211"  type="compass_from_magnetic_field.py" name="Compass" respawn="true"/>
-	<node pkg="tricat_211"  type="obstacle_filter.py" name="Obstacle_Filter" respawn="true"/>
-	<node pkg="tricat_211"  type="dwa_path_planner.py" name="DWA_PP" respawn="true" output="screen"/>
-	<node pkg="tricat_211"  type="pid_controller.py" name="PD_Controller" respawn="true" output="screen"/>
+	<node pkg="tricat_211"  type="obstacle_filter_short.py" name="Obstacle_Filter" respawn="true"/>
+	<node pkg="tricat_211"  type="path_plan.py" name="Path_Plan" respawn="true" output="screen"/>
+        <!--<node pkg="tricat_211"  type="path_plan_simulation.py" name="Path_Plan" respawn="true" output="screen"/>-->
+	<!--<node pkg="tricat_211"  type="path_plan_simulation_window.py" name="Path_Plan_Window"/>-->
 
 <!--PARAMETER-->
-	<rosparam command="load" file="$(find tricat_211)/params/passing_obstacles_param.yaml"/>
+	<rosparam command="load" file="$(find tricat_211)/params/path_plan_param.yaml"/>
 
 <!--LiDAR-->
 	<node name="rplidarNode"          pkg="rplidar_ros"  type="rplidarNode" output="screen">
@@ -58,7 +55,7 @@
   
 	<node pkg="obstacle_detector" type="obstacle_visualizer" name="obstacle_visualizer" output="screen"/>
   
-	<!--<node pkg="rviz" type="rviz" name="rviz" output="screen" args="-d $(find obstacle_detector)/resources/detector.rviz"/>-->
+	<node pkg="rviz" type="rviz" name="rviz" output="screen" args="-d $(find obstacle_detector)/resources/detector.rviz"/>
 
 <!--GPS-->
 	<include file="$(find ublox_gps)/launch/ublox_device.launch">
@@ -70,21 +67,20 @@
 	    <arg name="clear_params" value="false"/>
 	</include>
 
-	<node pkg="ntrip_ros" type="ntripclient.py" name="ntrip_ros">
+	<!--<node pkg="ntrip_ros" type="ntripclient.py" name="ntrip_ros">
 	    <param name="rtcm_topic" value="/send_rtcm"/>
 	    <param name="ntrip_server" value="vrs3.ngii.go.kr:2101"/>
 	    <param name="ntrip_user" value="zzjune0709"/>
 	    <param name="ntrip_pass" value="ngii"/>
 	    <param name="ntrip_stream" value="VRS-RTCM31"/>
 	    <param name="nmea_gga" value="$GPGGA,024539.902,3723.004,N,12639.255,E,1,12,1.0,0.0,M,0.0,M,,*60"/>
-	</node>
+	</node>-->
 
 <!--IMU-->
 	<node pkg="myahrs_driver" type="myahrs_driver" name="IMU">
   	    <param name="port" value="/dev/ttyIMU" />
 	    <param name="baud_rate" value="115200" />
- 	    </node>
-	
+ 	</node>
 
 <!--Arduino-->
 	<node pkg="tricat_211" type="serial_node.py" name="arduino" args="/dev/ttyARDUINO" respawn="true"/>
