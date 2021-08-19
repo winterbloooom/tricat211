@@ -312,8 +312,8 @@ class ObstacleFilter:
                 for i in range(div_num):
                     mid_x = start_x + (end_x-start_x)*(i/div_num)
                     mid_y = start_y + (end_y-start_y)*(i/div_num)
-                    w_theta = math.atan2(ob_y,ob_x) * math.pi / 180
-                    mid_point = np.array([[mid_x, mid_y, bearing]])
+                    w_theta = math.atan2(mid_y,mid_x) * math.pi / 180
+                    mid_point = np.array([[mid_x, mid_y, w_theta]])
                     self.filter_wall_list_DWA = np.append(self.filter_wall_list_DWA, mid_point, axis = 0)
                                 
                 w_info = np.array([[end_x, end_y, (math.atan2(end_y, end_x) * math.pi / 180)]])
