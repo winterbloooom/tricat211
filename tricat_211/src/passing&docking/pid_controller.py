@@ -12,10 +12,7 @@ from std_msgs.msg import Float32
 class PID:
     def __init__(self):
         PID_config = rospy.get_param("PID")
-        self.init_thruster = 1500
-        self.init_servo = 93
-
-        self.thruster_pwm = 1500
+        self.thruster_pwm = 1520
         self.servo_control = 93
 
         self.cur_v = 0.0
@@ -44,7 +41,7 @@ class PID:
         rospy.Subscriber("/ublox_gps/navpvt", NavPVT, self.velocity_callback)
         rospy.Subscriber("/best_U", DWA, self.DWA_data_callback)
 
-        self.Servo_pub = rospy.Publisher("/Servo", Float32, queue_size=10)
+        self.Servo_pub = rospy.Publisher("/Servo", UInt16, queue_size=10)
         self.thruster_pub = rospy.Publisher("/thruster", UInt16, queue_size=10)
 
     def yaw_rate_callback(self, data):
@@ -66,7 +63,7 @@ class PID:
 
         v_derivative = (self.cur_v - self.prev_v) / self.rate # division 1 / self.rate  # replaced with accel for drivative kick
         self.prev_v = self.cur_v
-        self.cd_thruster = self.ki_thruster * -v_derivative
+        self.cd_thruster = self.kd_thruster * -v_derivative
 
         thruster_pd = self.cp_thruster + self.ci_thruster + self.cd_thruster
         self.thruster_pwm = self.thruster_pwm + thruster_pd
@@ -78,9 +75,10 @@ class PID:
         else:
             pass
 
-        return self.thruster_pwm
+        return 1600 #self.thruster_pwm
 
     def servo_pid_controller(self):
+        '''
         self.error_yaw_rate = self.optimal_yaw_rate - self.cur_yaw_rate
 
         self.cp_servo = self.kp_servo * self.error_yaw_rate
@@ -92,19 +90,27 @@ class PID:
  
         yaw_rate_derivative = (self.cur_yaw_rate - self.prev_yaw_rate) / self.rate # division 1 / self.rate
         self.prev_yaw_rate = self.cur_yaw_rate
-        self.cd_servo = self.ki_servo * -yaw_rate_derivative
+        self.cd_servo = self.kd_servo * -yaw_rate_derivative
         self.ci_servo = 0
         
         servo_pd = -(self.cp_servo + self.ci_servo + self.cd_servo)
-        self.servo_control = self.servo_control + servo_pd
-
-        if self.servo_control > 119: #93+25
-            self.servo_control = 119
-        elif self.servo_control < 67:# 93-25
-            self.servo_control = 67
+        self.servo_control = (self.servo_control + servo_pd)
+        if self.servo_control > 118: # 93+25  right
+            self.servo_control = 118
+        elif self.servo_control < 68: # 93-25 left
+            self.servo_control = 68
         else:
             pass
-
+        '''
+        x = self.optimal_yaw_rate
+        y = -228.92 * x**3 - 205.16 * x**2 -84.808*x + 87.947
+        self.servo_control = int(y)
+        if self.servo_control > 93+20: # 93+25  right
+            self.servo_control = 93+20
+        elif self.servo_control < 93-20: # 93-25 left
+            self.servo_control = 93-20
+        else:
+            pass
         return self.servo_control
 
     def control_publisher(self):
@@ -115,17 +121,26 @@ class PID:
         self.Servo_pub.publish(output_msg.servo)
     
     def prt(self):
-        print(self.thruster_pwm)
-        print(self.servo_control)
+        print("-------------------arduino-------------------")
+        print("thruster:", self.thruster_pwm, "servo : ", self.servo_control)
+        
+        
         
 
 def main():
     rospy.init_node('PID_controller', anonymous=False)
     pid = PID()
-    rate = rospy.Rate(1 / pid.rate)
+    hz = 10
+    rate = rospy.Rate(hz)
     while not rospy.is_shutdown():
+        hz = hz -1
+        
         pid.control_publisher()
-        pid.prt()
+
+        if hz < 1:
+            pid.prt()
+            hz = 10
+
         rate.sleep()
     rospy.spin()
 if __name__ == '__main__':

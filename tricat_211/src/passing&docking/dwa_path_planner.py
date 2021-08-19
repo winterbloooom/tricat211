@@ -33,9 +33,9 @@ class Boat:
         self.y = msg.y
 
     def yaw_callback(self, msg):
-        if -90 < msg.bearing < 90:
+        if -90 < msg.bearing <= 180:
             self.yaw = (90 - msg.bearing) * math.pi / 180
-        else:
+        elif -90 >= msg.bearing >= -180:
             self.yaw = -(270 + msg.bearing) * math.pi / 180
         # degree N is 0, right is +, left is -, bearing is yaw najunge byungyung
 
@@ -46,7 +46,6 @@ class Boat:
         self.speed = float(msg.gSpeed / 1000.0) # m/s
 
     def boat_status(self):
-        print("boat_status : ", [self.x, self.y, self.yaw, self.speed, self.yaw_rate])
         return np.array([self.x, self.y, self.yaw, self.speed, self.yaw_rate])
 
 
@@ -72,8 +71,6 @@ class Goal:
         self.way_list = np.delete(self.way_list, 2, axis=1)
 
     def set_next_point(self):
-        print("set next : ")
-        print(self.way_list)
         self.way_list = np.delete(self.way_list, 0, axis = 0)
 
 
@@ -130,10 +127,10 @@ class DWA_Calc:
         self.boat_length = dwa_config['boat_length']  # [m] for collision check
         self.goal_range = dwa_config['goal_range'] # [m]
 
-        self.edge1 = [edge_points['map_00_lat'], edge_points['map_00_lon'], 20]
-        self.edge2 = [edge_points['map_0y_lat'], edge_points['map_0y_lon'], 20]
-        self.edge3 = [edge_points['map_x0_lat'], edge_points['map_x0_lon'], 20]
-        self.edge4 = [edge_points['map_xy_lat'], edge_points['map_xy_lon'], 20]
+        self.edge1 = [edge_points['map_00_lat'], edge_points['map_00_lon'], edge_points['alt']]
+        self.edge2 = [edge_points['map_0y_lat'], edge_points['map_0y_lon'], edge_points['alt']]
+        self.edge3 = [edge_points['map_x0_lat'], edge_points['map_x0_lon'], edge_points['alt']]
+        self.edge4 = [edge_points['map_xy_lat'], edge_points['map_xy_lon'], edge_points['alt']]
         self.edge_points = [self.edge1, self.edge2, self.edge3, self.edge4]
 
         self.class_obstacle = Ob()
@@ -159,8 +156,6 @@ class DWA_Calc:
         self.class_goal.set_next_point()
         if len(self.class_goal.way_list) != 0:
             self.goal = [self.class_goal.way_list[0][0], self.class_goal.way_list[0][1]]
-        print("goal_update : ", self.goal)
-        # print(self.goal)
 
 
     def arrival_check(self):
@@ -171,12 +166,15 @@ class DWA_Calc:
             return False
 
     def DWAPublisher(self):
-        print("waypoint : ", self.class_goal.way_list)
-        
         dwa = DWA()
         dwa.v = self.best_u[0]
-        dwa.yaw_rate = -self.best_u[1]
-        print("best U : ", self.best_u)
+        dwa.yaw_rate = self.best_u[1]
+        self.dwa_pub.publish(dwa)
+    
+    def PausePublisher(self):
+        dwa = DWA()
+        dwa.v = 0.0
+        dwa.yaw_rate = 0.0
         self.dwa_pub.publish(dwa)
 
     def calc_dynamic_window(self):
@@ -212,9 +210,9 @@ class DWA_Calc:
                 if min_cost >= final_cost:
                     min_cost = final_cost
                     best_u = [v, yaw_rate]
-                    '''if abs(best_u[0]) < self.stuck_flag_cons \
-                            and abs(self.boat.speed) < self.stuck_flag_cons:
-                        best_u[1] = -self.max_delta_yaw_rate'''
+                    if abs(best_u[0]) < self.stuck_flag_cons \
+                            and abs(self.boat.speed) < self.stuck_flag_cons:    
+                        best_u =[self.max_accel, -self.max_delta_yaw_rate] #m/s max rad/ss
         
         return best_u
 
@@ -307,48 +305,52 @@ class DWA_Calc:
             return True #inside the line
         else :
             return False
-
+    
+    def prt(self):
+        print("------------------dwa------------------")
+        print("current goal : " + str(round(self.goal[0],3)) + " , " + str(round(self.goal[1], 3)) + " / x, y : " + str(round(self.boat.boat_status()[0],2)) + " , " + str(round(self.boat.boat_status()[1],2)))
+        print("boat_status : " + str(round(self.boat.boat_status()[2]* 180 / math.pi,1)) + " deg , " + str(round(self.boat.boat_status()[3],2)) + "m/s , " + str(round(self.boat.boat_status()[4] * 180 / math.pi,2)) + " deg/s")
+        print("Best U : " + str(round(self.best_u[0], 2)) + " m/s , " + str(round(self.best_u[1] * 180 / math.pi,2)) + " deg/s")
 
 def shutdownhook():
-    print("End the programe") #no meaning
+    print("End the program") #no meaning
 
 
 def main():
     rospy.init_node('DWA', anonymous=False)
-    rate = rospy.Rate(20)
-    #rospy.Duration(10)
-
-    # goal = Goal()
     dwa_path = DWA_Calc()
-
-    
+    hz = 10
+    rate = rospy.Rate(hz)
     while not rospy.is_shutdown():
-        print("----")
-        dwa_path.obstacle_init()
-        #print(dwa_path.obstacles)        
+        hz = hz -1
+
+        dwa_path.obstacle_init() 
 
         if dwa_path.arrival_check():
-            print("arrived to next goal")
             if len(dwa_path.class_goal.way_list) == 0:
-                print("last goal")
+                print("yeah~ last goal arrived")
+                dwa_path.PausePublisher()
                 rospy.on_shutdown(shutdownhook)
                 break  #arrived final goal
             elif len(dwa_path.class_goal.way_list) == 1:
-                print("almost last, set next goal")
+                print("waypoint arrived! go to the LAST GOAL!")
                 dwa_path.goal_update()
             else:
-                print("set next goal")
+                print("waypoint arrived! go to the next goal!")
                 dwa_path.goal_update()
                 
 
         dwa_path.obstacle_init()
-        print("start dwa_control")
+        
         dwa_path.dwa_control()
-        print("start publishing")
+        #print("calculation complete")
         dwa_path.DWAPublisher()
         
+        if hz < 1:
+            dwa_path.prt()
+            hz = 10
+
         rate.sleep()
-        #rospy.sleep(1)
 
     rospy.spin()
 
