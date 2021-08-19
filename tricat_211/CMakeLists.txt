@@ -63,6 +63,8 @@ add_message_files(
     WallParticle.msg
     CircleObstacleDWA.msg
     FilteringObstaclesDWA.msg
+    FilteredObstacles.msg
+    ObstaclePoint.msg
 )
 
 ## Generate services in the 'srv' folder
