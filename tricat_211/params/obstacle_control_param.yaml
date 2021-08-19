@@ -11,6 +11,8 @@ waypoint_List: {  # kyeong jun notion
     [37.4481335, 126.6535309, 30.0], # end
     [37.4480499, 126.653475, 30.0], # start
     [37.4481335, 126.6535309, 30.0], # end
+    [37.4480499, 126.653475, 30.0], # start
+    [37.4481335, 126.6535309, 30.0], # end
     [37.4480626, 126.6534365, 30.0], # 1
     [37.4480518, 126.6534633, 30.0], # 2
     [37.4480344, 126.6535037, 30.0], # 3
@@ -23,11 +25,13 @@ waypoint_List: {  # kyeong jun notion
   ],
   }
 
-goal_range : 1.2
+goal_range : 2.5
 # for `Waypoints` reached judgement
 
-kp_servo : 0.11
-kd_servo : 0.22
+kp_servo : 0.4
 
-thruster_power : 1680
+thruster_power : 1630
 
+safe_radius : 1.2
+
+LPP_kp_servo : 0.8

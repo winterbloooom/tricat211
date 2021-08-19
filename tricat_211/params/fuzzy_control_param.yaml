@@ -23,11 +23,10 @@ waypoint_List: {  # kyeong jun notion
   ],
   }
 
-goal_range : 1.2
+goal_range : 2
 # for `Waypoints` reached judgement
 
-kp_servo : 0.11
-kd_servo : 0.22
+kp_servo : 0.4
+kd_servo : 0.0
 
-thruster_power : 1680
-
+thruster_power : 1600
