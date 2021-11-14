@@ -32,6 +32,6 @@ kp_servo : 0.4
 
 thruster_power : 1630
 
-safe_radius : 1.2
+safe_radius : 1.5
 
 LPP_kp_servo : 0.8

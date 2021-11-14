@@ -24,8 +24,8 @@ predict_step : 5,
 predict_step_size : 1.0,
 
 g_value_rotate_gain_0 : 1,
-g_value_rotate_gain_30 : 1.5,
-g_value_rotate_gain_60 : 2.0,
+g_value_rotate_gain_30 : 2.0,
+g_value_rotate_gain_60 : 3.0,
 g_value_rotate_gain_90 : 4.0,
 h_value_gain : 1,
 
