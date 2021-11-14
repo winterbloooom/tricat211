@@ -15,6 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 
+find_package (OpenCV REQUIRED)
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -52,20 +54,27 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
     HeadingAngle.msg
-    FilteringObstacles.msg
-    CircleObstacle.msg
-    DWA.msg
     Control.msg
-    FilteringWalls.msg
-    WallObstacle.msg
-    DockingMsg.msg
-    FilteringWallsDWA.msg
-    WallParticle.msg
-    CircleObstacleDWA.msg
-    FilteringObstaclesDWA.msg
-    FilteredObstacles.msg
-    ObstaclePoint.msg
+    BoundingBox.msg
+    BoundingBoxes.msg
+    DockingPrint.msg
 )
+##NOT USE MSG
+    #FilteringObstacles.msg
+    #CircleObstacle.msg
+    #DWA.msg
+    #FilteringWalls.msg
+    #WallObstacle.msg
+    #DockingMsg.msg
+    #FilteringWallsDWA.msg
+    #WallParticle.msg
+    #CircleObstacleDWA.msg
+    #FilteringObstaclesDWA.msg
+    #FilteredObstacles.msg
+    #ObstaclePoint.msg
+    #EnuObstacle.msg
+    #EnuTrajectory.msg
+    #Info.msg
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -118,11 +127,12 @@ generate_messages(
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES tricat_211
+  LIBRARIES opencv
   CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs
   CATKIN_DEPENDS message_runtime
-#  DEPENDS system_lib
+  DEPENDS system_lib
 )
 
 ###########
@@ -134,6 +144,7 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
+  ${OpenCV_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
