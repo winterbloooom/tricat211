@@ -10,6 +10,7 @@ import time
 from std_msgs.msg import String, UInt16, Float32
 from geometry_msgs.msg import Point
 from tricat_211.msg import FilteredObstacles, ObstaclePoint, Control, HeadingAngle
+from tricat_211.msg import Info, EnuObstacle, EnuTrajectory
 
 
 class Obstacle:
@@ -51,6 +52,7 @@ class PathPlanner:
         path_plan_config = rospy.get_param("path_plan")
         self.servo_pub = rospy.Publisher("/Servo", UInt16, queue_size=10)
         self.thruster_pub = rospy.Publisher("/thruster", UInt16, queue_size=10)
+        self.info_pub = rospy.Publisher("/info", Info, queue_size=20)
 
         ## PID
         self.init_servo = 94
@@ -88,10 +90,16 @@ class PathPlanner:
         self.h_value_gain = path_plan_config["h_value_gain"]
         self.past_path = np.array([self.start_pos])  #ckeck and compare with path_paln_simulation.py
         self.trajectory = np.zeros((1, 2))
+        self.search_center_pub = []
+        self.best_point_pub = []
+        self.calc_point_num_pub = 0
 
         ## real moving
         self.arrival_range = path_plan_config["arrival_range"]
         self.thruster_power = path_plan_config["thruster_power"]
+        self.rotate_angle = 0.0
+        self.error_angle = 0.0
+        self.servo_control = 0.0
 
     def points_coordinate(self, points):
         converted = np.zeros_like(points)
@@ -154,16 +162,16 @@ class PathPlanner:
             vec = p - search_center
             vec = vec / math.sqrt((vec[0] ** 2 + vec[1] ** 2))
             sin_value = round(predict_heading[0] * vec[1] - predict_heading[1] * vec[0], 5)
-            rotate_angle = abs(math.degrees(math.asin(sin_value)))  # degree
+            rotate = abs(math.degrees(math.asin(sin_value)))  # degree
 
             distance_to_search = (p[0] - search_center[0]) ** 2 + (p[1] - search_center[1]) ** 2
-            if 0 <= rotate_angle < 30:
+            if 0 <= rotate < 30:
                 rotate_cost = distance_to_search * self.g_value_rotate_gain_0
-            elif 30 <= rotate_angle < 60:
+            elif 30 <= rotate < 60:
                 rotate_cost = distance_to_search * self.g_value_rotate_gain_30
-            elif 60 <= rotate_angle < 90:
+            elif 60 <= rotate < 90:
                 rotate_cost = distance_to_search * self.g_value_rotate_gain_60
-            else: #if 90 < rotate_angle <= 180
+            else: #if 90 < rotate <= 180
                 rotate_cost = distance_to_search * self.g_value_rotate_gain_90
 
             # g
@@ -178,7 +186,7 @@ class PathPlanner:
             # min f
             if min_f_value > f:
                 min_f_value = f
-                if np.dot(vec, predict_heading) == -1:
+                if np.dot(vec, predict_heading) == -1: #not working
                     print("|{:-<82}+".format(" make_trajectory() / best_point() / It Stucked!"))
                     best_point = np.array([search_center[0] + predict_heading[0] * self.predict_step_size,
                      search_center[1] + predict_heading[1] * self.predict_step_size])
@@ -305,7 +313,9 @@ class PathPlanner:
         else:
             pass
 
-        print("| rotate_angle   {0:>8}  | error_angle   {1:>8}  | servo_control   {2:>11} |".format(str(round(self.angle)), str(round(error_angle)), str(round(servo_control))))
+        self.rotate_angle = self.angle
+        self.error_angle = error_angle
+        self.servo_control = servo_control
 
         return servo_control
 
@@ -326,8 +336,34 @@ class PathPlanner:
         print("| {0:<16} | {1:>8} , {2:>8} || {3:<39}|".format(\
             "next_goal", str(round(self.next_goal[0], 3)), str(round(self.next_goal[1], 3)), ""))
         print("| {0:<16} | {1:>8} , {2:>8} || {3:<16} | {4:>8} , {5:>8} |".format(\
-            "trajectory[0]", str(round(self.cur_pos[0], 2)), str(round(self.cur_pos[1], 2)),\
+            "trajectory[0]", str(round(self.trajectory[0][0], 2)), str(round(self.trajectory[0][1], 2)),\
             "heading", str(round(self.cur_heading[0], 2)), str(round(self.cur_heading[1], 2))))
+        print("| rotate_angle   {0:>8}  | error_angle   {1:>8}  | servo_control   {2:>11} |".format(str(round(self.rotate_angle)), str(round(self.error_angle)), str(round(self.servo_control))))
+
+    def topic_pub(self):
+        info = Info()
+        info.curPosX = round(self.cur_pos[0], 2)
+        info.curPosY = round(self.cur_pos[1], 2)
+        info.bearing = round(self.bearing)
+        info.nextGoalX = round(self.next_goal[0], 3)
+        info.nextGoalY = round(self.next_goal[1], 3)
+        info.trajectory0X = round(self.trajectory[0][0], 2)
+        info.trajectory0Y = round(self.trajectory[0][1], 2)
+        info.rotateAngle = round(self.rotate_angle)
+        info.errorAngle = round(self.error_angle)
+        info.servoControl = round(self.servo_control)
+        for i in range(len(self.trajectory)):
+            info.trajectory.append(EnuTrajectory(x=self.trajectory[i][0], y=self.trajectory[i][1]))
+        for i in range(len(self.ob_list)):
+            info.obList.append(EnuObstacle(x=round(self.ob_list[i][0], 2), y=round(self.ob_list[i][1], 2)))
+        # searchCenterX = 
+        # searchCenterY
+        # bestPointX
+        # bestPointY
+        # calcPointNum
+        # float64 headingX
+        # float64 headingY
+        self.info_pub.publish(info)
 
 if __name__ == '__main__':
     rospy.init_node('Path_Plan', anonymous=False)
@@ -342,8 +378,7 @@ if __name__ == '__main__':
         pp.bearing = pp.boat.bearing
 
         hz -= 1
-        pp.print_info()
-
+        
         if pp.is_finished():
             print("|{:-<82}+".format(" main loop / Arrived Next Goal"))
             if len(pp.end_points) > 1:
@@ -364,8 +399,11 @@ if __name__ == '__main__':
             pp.obstacle_update()
             if hz < 1:
                 pp.make_trajectory()
-                hz = 20
+                hz = 10
             pp.control_publisher()
+            
+        pp.print_info()
+        pp.topic_pub()
 
         rate.sleep()
 
