@@ -1,54 +1,51 @@
-OB : {
-decision_range : 2, #[m]
-min_confidence : 0.7 #0~1
+docking_param : {
+  target_class : "square",
+  extra_span : 0.2,
+  close_distance : 2.0,
+  docking_zone_gps1 : [35.0696411, 128.5788397, 43.0],
+  docking_zone_gps2 : [35.0696411, 128.5788397, 43.0],
+  map_00_lat : 35.0693571,
+  map_00_lon : 128.5789111,
+  map_00_alt : 43.0,
+  docking_zone_range : 1.0,
+
+  point_1 : [[35.0696411, 128.5788397, 43.0], [35.0696442,128.5788795, 43.0]], #, [35.0696470, 128.5789041, 43.0]]
+  point_2 : [[35.0695987, 128.5788595, 43.0], [35.0696097,128.5788842, 43.0]], #, [35.0696176, 128.5789126, 43.0]]
+  point_3 : [[35.0695841, 128.5788596, 43.0], [35.0695938,128.5789037, 43.0], [35.0695991, 128.5789242, 43.0]]
 }
+
+kp_servo : 0.4
+kd_servo : 0.0
+
+#thruster_power : 1600
+
+# red square
+# red circle
+# red triangle
+# green square
+# green circle
+# green tricangle
+# blue square
+# blue circle
+# blue triangle
 
 map_dd : {
-map_00_lat : 37.448002351837694,
-map_00_lon : 126.6533954619325,
-map_00_alt : 20.0
-}
-
-edge_dd : {
-  map_00_lat : 37.448002351837694,
-  map_00_lon : 126.6533954619325,
-  map_00_alt : 20.0,
-  map_0y_lat : 37.45125514649911,
-  map_0y_lon : 126.65556670709458,
-  map_x0_lat : 37.45123704721054,
-  map_x0_lon : 126.65539705738055,
-  map_xy_lat : 37.451199251623244, 
-  map_xy_lon : 126.65554189666211
+  map_00_lat : 35.0693571,
+  map_00_lon : 128.5789111,
+  map_00_alt : 43.0
   }
 
-DWA : {
-max_speed : 1.0,  #[m/s]
-min_speed : -0.5, #[m/s]
 
-max_accel : 0.2, #[m/ss]
+goal_range : 1.0
+# for `Waypoints` reached judgement
 
-max_yaw_rate : 40.0, # * math.pi / 180.0  # [rad/s]
+#kp_servo : 0.4
+ki_servo : 0.00 # max 0.05?
+#kd_servo : 0.0
 
-max_delta_yaw_rate : 40.0, # * math.pi / 180.0  # [rad/ss]
+kp_distance : 40
 
-v_resolution : 0.01,  # [m/s]
-yaw_rate_resolution : 0.1, # * math.pi / 180.0  # [rad/s]
+thruster_power : 1600
 
-dt : 0.1,  # [s] Time tick for motion prediction
-predict_time : 3.0, # [s]
+min_power : 1600
 
-to_goal_cost_gain : 2.0,
-speed_cost_gain : 0.5,
-obstacle_cost_gain : 1.0,
-
-stuck_flag_cons : 0.01,  # constant to prevent robot stucked
-boat_width : 0.8, # [m] for collision check
-boat_length : 1.4,
-
-goal_range : 1 # [m] for goal check
-}
-
-IMG : {
-target_class : "Circle", #temp
-min_confidence : 0.7 #0~1
-}
