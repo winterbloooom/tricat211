@@ -18,6 +18,10 @@ class Goal:
         self.boat_x = 0.0
         self.boat_y = 0.0
 
+        self.target_servo_ang = None
+        self.ob_distance = None
+        self.ob_angle = None
+
         rospy.Subscriber("/bearing", HeadingAngle, self.heading_callback)
         rospy.Subscriber("/enu_position", Point, self.enu_callback)
 
@@ -125,12 +129,7 @@ class Goal:
         self.Servo_pub.publish(output_msg.servo)
     '''
 
-    def a(self):
-        return 0
-
-
-    def fuzzy_control_avoidance(self):
-        
+    def fuzzy(self):
         distance = ctrl.Antecedent(np.arange(0, 4, 0.1), 'distance')
         angle = ctrl.Antecedent(np.arange(-50, 50, 1), 'angle')
         target_servo = ctrl.Consequent(np.arange(-30, 30, 1), 'target_servo')
@@ -159,15 +158,6 @@ class Goal:
         target_servo['LL'] = fuzz.trimf(target_servo.universe, [5, 11, 16])
         target_servo['LLL'] = fuzz.trimf(target_servo.universe, [12, 19, 26])
         target_servo['LLLL'] = fuzz.trimf(target_servo.universe, [23, 30, 30])
-
-        #distance.view()
-        #angle.view()
-        ob_distance = input("Input near ob distance\n")
-        ob_angle = input("Input near ob angle\n")
-
-        
-        # target_angle.view()
-        #input('Press Enter')
 
         rule_ED_NL = ctrl.Rule(distance['ED'] & angle['NL'], target_servo['RR'])
         rule_ED_NM = ctrl.Rule(distance['ED'] & angle['NM'], target_servo['RRR'])
@@ -201,19 +191,28 @@ class Goal:
             rule_D_NL, rule_D_NM, rule_D_NS, rule_D_PL, rule_D_PM, rule_D_PS, \
             rule_W_NL, rule_W_NM, rule_W_NS, rule_W_PL, rule_W_PM, rule_W_PS, \
             rule_B_NL, rule_B_NM, rule_B_NS, rule_B_PL, rule_B_PM, rule_B_PS])
-        target_servo_ang = ctrl.ControlSystemSimulation(target_servo_ctrl)
+        self.target_servo_ang = ctrl.ControlSystemSimulation(target_servo_ctrl)
 
-        target_servo_ang.input['distance'] = float(ob_distance)
-        target_servo_ang.input['angle'] = float(ob_angle)
 
-        target_servo_ang.compute()
-        print('target servo angle output:',round(target_servo_ang.output['target_servo']))
+
+    def fuzzy_control_avoidance(self):
+        
+        self.ob_distance = input("Input near ob distance\n")
+        self.ob_angle = input("Input near ob angle\n")
+
+        self.target_servo_ang.input['distance'] = float(self.ob_distance)
+        self.target_servo_ang.input['angle'] = float(self.ob_angle)
+
+        self.target_servo_ang.compute()
+        print('target servo angle output:',self.target_servo_ang.output['target_servo'])
     
 
 def main():
     rospy.init_node('fuzzy_ctrl', anonymous=False)
 
     goal = Goal()
+
+    goal.fuzzy()
     
     rate = rospy.Rate(10)
 
