@@ -21,8 +21,6 @@ class Goal:
         self.boat_x = 0.0
         self.boat_y = 0.0
 
-        self.yaw_rate = 0.0
-
         rospy.Subscriber("/imu/data", Imu, self.yaw_rate_callback)
         rospy.Subscriber("/bearing", HeadingAngle, self.heading_callback)
         rospy.Subscriber("/enu_position", Point, self.enu_callback)
@@ -47,12 +45,19 @@ class Goal:
         self.bearing = 0.0
 
         ## PID 
-        #self.init_servo = 93
-        self.servo_control = 93
+        self.init_servo = 94
+        self.servo_control = 0
+        self.errSum = 0.0
+        self.yaw_rate = 0.0
+
+        self.thrust = 0
 
         self.kp_servo = rospy.get_param("kp_servo")
+        self.ki_servo = rospy.get_param("ki_servo")
         self.kd_servo = rospy.get_param("kd_servo")
         self.thruster_power = rospy.get_param("thruster_power")
+        self.min_power = rospy.get_param("min_power")
+        self.kp_distance = rospy.get_param("kp_distance")
 
         self.Servo_pub = rospy.Publisher("/Servo", UInt16, queue_size=10)
         self.thruster_pub = rospy.Publisher("/thruster", UInt16, queue_size=10)
@@ -135,51 +140,70 @@ class Goal:
             return False
 
     def prt(self):
-        if self.servo_control > 93+3: # left turn
+        if self.servo_control > 94+3: # left turn
             turn = "left"
-        elif self.servo_control < 93-3: # right turn
+        elif self.servo_control < 94-3: # right turn
             turn = "right"
         else:
             turn = "mid"
-        print("distance : ", self.dist_to_goal)
+        print("distance, thruster : ", self.dist_to_goal, self.thrust)
         print("my xy : ",self.boat_x, self.boat_y)
         print("way xy : ",self.goal_x, self.goal_y)
         print("a, b, t : ", self.angle, self.bearing, self.OPTIMAL_DIRECTION(self.bearing))
         print("servo : " + turn, round(self.servo_control))
+        print("errSum:", self.errSum)
         print('-------------------------------------')
     
     def servo_pid_controller(self):
         # P ctrl
         error_angle = self.target() # deg
 
+        # I ctrl
+        self.errSum += (error_angle * 0.1)
+        
+        if self.errSum > 90:
+            self.errSum = 90
+        elif self.errSum < -90:
+            self.errSum = -90
+        else:
+            pass
+
         # D ctrl
         yaw_rate = RAD2DEG(self.yaw_rate) # deg/s
 
+
         cp_servo = self.kp_servo * error_angle
+        ci_servo = self.ki_servo * self.errSum
         cd_servo = self.kd_servo * -yaw_rate
 
-        servo_pd = -(cp_servo + cd_servo)
-        self.servo_control = self.servo_control + servo_pd
+        servo_pid = -(cp_servo + ci_servo + cd_servo)
+        self.servo_control = self.init_servo + servo_pid
 
-        if self.servo_control > 93+24: #94+24
-            self.servo_control = 93+24
-        elif self.servo_control < 93-24:
-            self.servo_control = 93-24
+        if self.servo_control > 94+26: #94+24
+            self.servo_control = 94+26
+        elif self.servo_control < 94-26:
+            self.servo_control = 94-26
         else:
             pass
 
         return self.servo_control
 
     def control_publisher(self):
+        ## propotional ctrl for thruster
+        self.thrust = int(self.min_power + self.kp_distance * self.dist_to_goal)
+        if self.thrust > self.thruster_power:
+            self.thrust = self.thruster_power
+        else:
+            pass
         output_msg = Control()
-        output_msg.thruster = self.thruster_power  #  param thruster value
+        output_msg.thruster = self.thrust # self.thruster_power
         output_msg.servo = round(self.servo_pid_controller())
         self.thruster_pub.publish(output_msg.thruster)
         self.Servo_pub.publish(output_msg.servo)
 
 
 def main():
-    rospy.init_node('Hopping_PD_controller', anonymous=False)
+    rospy.init_node('Hopping_PID_controller', anonymous=False)
 
     goal = Goal()
     
@@ -197,10 +221,12 @@ def main():
                 goal.goal_x = goal.goal_list[0][0]
                 goal.goal_y = goal.goal_list[0][1]
                 goal.set_next_point()
+                goal.errSum = 0.0 # error initialization
             else:
                 goal.set_next_point()
                 goal.goal_x = goal.goal_list[0][0]
                 goal.goal_y = goal.goal_list[0][1]
+                goal.errSum = 0.0 # error initialization
 
         goal.control_publisher()
         goal.prt()
