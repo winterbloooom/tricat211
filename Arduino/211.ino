@@ -6,14 +6,13 @@
 #include <Servo.h> 
 #include <ros.h>
 #include <std_msgs/UInt16.h>
-#include <std_msgs/Float32.h>
 
 ros::NodeHandle  nh;
  
 int ch1; //스러스터  
 int ch2; //서보모터환
 
-int ch5; //rc ac
+int ch5; //LED
 int ch6; //릴레이모듈
 int val1;
 int val2;
@@ -26,7 +25,7 @@ Servo thruster2; //스러스터2
 Servo servo1;
 Servo servo2;    //서보모터
 
-void Servo_cb( const std_msgs::Float32& cmd_msg){
+void Servo_cb( const std_msgs::UInt16& cmd_msg){
   servo1.write(cmd_msg.data);
   servo2.write(cmd_msg.data-2);
 }                             //0-300
@@ -36,7 +35,7 @@ void thruster_cb( const std_msgs::UInt16& cmd_msg){
   thruster2.writeMicroseconds(cmd_msg.data);//1100-1900
 }
 
-ros::Subscriber<std_msgs::Float32> sub1("Servo", Servo_cb);
+ros::Subscriber<std_msgs::UInt16> sub1("Servo", Servo_cb);
 ros::Subscriber<std_msgs::UInt16> sub3("thruster", thruster_cb);
 
 void setup()
@@ -46,20 +45,17 @@ void setup()
   nh.subscribe(sub3);
   
   pinMode(relaypin,OUTPUT); // 릴레이를 출력으로 설정
-  //pinMode(ip6,INPUT_PULLUP); // 스위치(릴레이)를 입력으로 설정
+  pinMode(ip6,INPUT_PULLUP); // 스위치(릴레이)를 입력으로 설정
   pinMode (ip1, INPUT);
 
   thruster1.attach(6); // 스러스터 6번핀
   thruster2.attach(7);// 스러스터2 7번핀
-  
   thruster1.writeMicroseconds(1500); // send "stop" signal to ESC
   thruster2.writeMicroseconds(1500); 
-  
   servo1.attach(8); //서보모터 8번핀
   servo2.attach(9); //서보모터 9번핀
-  
-  servo1.write(93); // initial state is Neutral
-  servo2.write(93-2); 
+  servo1.writeMicroseconds(93); // initial state is Neutral
+  servo2.writeMicroseconds(93); 
   
   //delay(1000);
   //Serial.begin(9600);
