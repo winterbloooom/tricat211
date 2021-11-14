@@ -4,13 +4,13 @@
 <!--211Node-->
 	<node pkg="tricat_211"  type="gps_converter.py" name="ENU_Converter" respawn="true"/>
 	<node pkg="tricat_211"  type="compass_from_magnetic_field.py" name="Compass" respawn="true"/>
-	<node pkg="tricat_211"  type="hopping_control.py" name="PathPlan_PD_Control" respawn="true" output="screen"/>
+	<node pkg="tricat_211"  type="hopping_control.py" name="PathPlan_PID_Ctrl" respawn="true" output="screen"/>
 
 <!--PARAMETER-->
 	<rosparam command="load" file="$(find tricat_211)/params/hopping_param.yaml"/>
 
 <!--GPS-->
-	<include file="$(find ublox_gps)/launch/ublox_device.launch">
+	<!--<include file="$(find ublox_gps)/launch/ublox_device.launch">
 	    <arg name="node_name" value="ublox_gps"/>
 	    <arg name="param_file_name" value="zed-f9p"/>
 	    <arg name="output" value="screen"/>
@@ -19,7 +19,7 @@
 	    <arg name="clear_params" value="false"/>
 	</include>
 
-	<!--<node pkg="ntrip_ros" type="ntripclient.py" name="ntrip_ros">
+	<node pkg="ntrip_ros" type="ntripclient.py" name="ntrip_ros">
 	    <param name="rtcm_topic" value="/send_rtcm"/>
 	    <param name="ntrip_server" value="vrs3.ngii.go.kr:2101"/>
 	    <param name="ntrip_user" value="zzjune0709"/>

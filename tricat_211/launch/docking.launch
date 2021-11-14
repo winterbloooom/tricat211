@@ -1,25 +1,43 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <launch>
-	<node pkg="tricat_211"  type="Fake_GPS_Publish.py" name="fakeGPS" respawn="true"/>
-	<node pkg="tricat_211"  type="Fake_imu_Publish.py" name="fakeIMU" respawn="true"/>
-	<!--<node pkg="tricat_211"  type="Fake_magnetic_Publish.py" name="fakeMagneticField" respawn="true"/>-->
+<!--211Node-->
+<!--	<node pkg="tricat_211"  type="docking_and_fuzzy_final.py" name="Docking" respawn="true" output="screen"/>-->
+	<node pkg="tricat_211"  type="docking_plan_b.py" name="Docking" respawn="true" output="screen"/>
+	<node pkg="tricat_211"  type="gps_converter.py" name="ENU_Converter" respawn="true"/>
+	<node pkg="tricat_211"  type="compass_from_magnetic_field.py" name="Compass" respawn="true"/>
 
-	<node pkg="tricat_211"  type="gps_converter.py" name="GPS_Converter" respawn="true"/>
+<!--PARAMETER-->
+	<rosparam command="load" file="$(find tricat_211)/params/docking_param.yaml"/>
 
-	<node pkg="tricat_211"  type="imu_converter.py" name="IMU_Converter" respawn="true"/>
-	<!--<node pkg="tricat_211"  type="compass_from_magnetic_field.py" name="Compass" respawn="true"/>-->
+<!--CAMERA-->
+	<include file="$(find realsense2_camera)/launch/rs_camera.launch">
+	</include>
+	<include file="$(find darknet_ros)/launch/darknet_ros_test.launch">
+	</include>	
 
-	<node pkg="tricat_211"  type="obstacle_filter.py" name="Obstacle_Filter" respawn="true"/>
+<!--LiDAR-->
+	<node name="rplidarNode"          pkg="rplidar_ros"  type="rplidarNode" output="screen">
+	    <param name="serial_port"         type="string" value="/dev/ttyLiDAR"/>  
+	    <param name="serial_baudrate"     type="int"    value="256000"/>
+	    <param name="frame_id"            type="string" value="laser"/>
+	    <param name="inverted"            type="bool"   value="false"/>
+	    <param name="angle_compensate"    type="bool"   value="true"/>
+	    <param name="scan_mode"           type="string" value="Stability"/>
+	</node>
+  <!--<node name="rviz" pkg="rviz" type="rviz" args="-d $(find tricat_211)/rviz/laser.rviz" />-->
 
-	<node pkg="tricat_211"  type="docking.py" name="Docking" respawn="true"/>
+<!--IMU-->
+	<node pkg="myahrs_driver" type="myahrs_driver" name="myahrs_driver">
+  	    <param name="port" value="/dev/ttyIMU" />
+	    <param name="baud_rate" value="115200" />
+ 	</node>
 
-	<!--<node pkg="tricat_211"  type="pid_controller.py" name="PD_Controller" respawn="true"/>-->
-	
-	<!--<node pkg="tricat_211" type="serial_node.py" name="arduino" args="/dev/ttyACM0" respawn="true"/>-->
+<!--Arduino-->
+	<node pkg="tricat_211" type="serial_node.py" name="ARDUINO" args="/dev/ttyARDUINO" respawn="true"/>
 
-	<rosparam command="load" file="$(find tricat_211)/params/doking_param.yaml"/>
-
-	<include file="$(find obstacle_detector)/launch/virtual_scanner.launch"/>
-
-	<node name="rqt" pkg="rqt_graph" type="rqt_graph"/>
+<!--RQT graph
+	<node name="rqt" pkg="rqt_graph" type="rqt_graph"/>-->
 </launch>
+
+
